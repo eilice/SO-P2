@@ -1,31 +1,32 @@
 // Alicja Kołodziejska
 
+#define _BSD_SOURCE // do usleep
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <time.h>
 
 // w spiżarni osadnicy trzymają mięso, w kuchni przyrządza i przechowuje się jedzenie
-sem_t kitchen, pantry; 
+pthread_mutex_t kitchen = PTHREAD_MUTEX_INITIALIZER, pantry = PTHREAD_MUTEX_INITIALIZER; 
 int food, quarry;
-const int night_length = 1;
-const int days = 4;
-char *ck, *ht;
+const int night_length = 10;
+const int days = 365;
+char ck[] = "Kucharz", ht[] = "Mysliwy";
 
 int people_left;
 
 void eat(char *type, char *name) {
-	sem_wait(&kitchen);		// obiad
+	pthread_mutex_lock(&kitchen);		// obiad
 	if(food) {
 		food--;
-		printf("%s %s je obiad, zostalo %d\n", type, name, food); 
-		sem_post(&kitchen);
+		//printf("%s %s je obiad, zostalo %d\n", type, name, food); 
+		pthread_mutex_unlock(&kitchen);
 	}
 	else {
-		printf("%s %s obrazil sie i odszedl\n", type, name);
-		sem_post(&kitchen);
+		//printf("%s %s obrazil sie i odszedl\n", type, name);
+		pthread_mutex_unlock(&kitchen);
 		people_left--;
 		pthread_exit(NULL);
 	}
@@ -34,40 +35,40 @@ void eat(char *type, char *name) {
 void *cook(void *name) {
 	int my_meat = 0;
 	for(int i=0; i<days; i++) {
-		printf("Kucharz %s wstaje\n", (char*) name); 
-		sem_wait(&pantry);		// pobranie mięsa
+		//printf("Kucharz %s wstaje\n", (char*) name); 
+		pthread_mutex_lock(&pantry);		// pobranie mięsa
 		if(quarry) {
 			my_meat = 1;
 			quarry--;
-			printf("Kucharz %s wzial mieso, zostalo %d\n", (char*) name, quarry);
+			//printf("Kucharz %s wzial mieso, zostalo %d\n", (char*) name, quarry);
 		}
-		sem_post(&pantry);
+		pthread_mutex_unlock(&pantry);
 		if(my_meat) {				// przyrządzenie posiłku
-			sem_wait(&kitchen);
+			pthread_mutex_lock(&kitchen);
 			food += rand()%6 + 1;
-			printf("Kucharz %s przygotowal obiad, mamy %d\n", (char*) name, food);
-			sem_post(&kitchen);
+			//printf("Kucharz %s przygotowal obiad, mamy %d\n", (char*) name, food);
+			pthread_mutex_unlock(&kitchen);
 			my_meat = 0;
 		}
 		eat(ck, (char*)name);
-		printf("Kucharz %s idzie spac\n", (char*) name); 
-		sleep(night_length);
+		//printf("Kucharz %s idzie spac\n", (char*) name); 
+		usleep(night_length);
 	}
 	pthread_exit(NULL);
 }
 
 void *hunt(void *name) {
 	for(int i=0; i<days; i++) {
-		printf("Mysliwy %s wstaje\n", (char*) name); 
+		//printf("Mysliwy %s wstaje\n", (char*) name); 
 		if(rand()%6 > rand()%6) {	// polowanie
-			sem_wait(&pantry);
+			pthread_mutex_lock(&pantry);
 			quarry++;
-			printf("Mysliwy %s upolowal, mamy %d miesa\n", (char*) name, quarry);
-			sem_post(&pantry);
+			//printf("Mysliwy %s upolowal, mamy %d miesa\n", (char*) name, quarry);
+			pthread_mutex_unlock(&pantry);
 		}
 		eat(ht, (char*) name);
-		printf("Mysliwy %s idzie spac\n", (char*) name); 
-		sleep(night_length);
+		//printf("Mysliwy %s idzie spac\n", (char*) name); 
+		usleep(night_length);
 	}
 	pthread_exit(NULL);
 }
@@ -78,10 +79,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 	
-	sem_init(&kitchen, 0, 1);
-	sem_init(&pantry, 0, 1);
-	
-	ck = "Kucharz", ht = "Mysliwy";
+	//ck = "Kucharz", ht = "Mysliwy";
 	
 	srand(time(0));
 	
@@ -91,7 +89,7 @@ int main(int argc, char *argv[]) {
 	quarry = atoi(argv[3]);
 	food = atoi(argv[4]);
 	
-	printf("%d mysliwych\n%d kucharzy\n%d miesa\n%d jedzenia\n\n", no_hunters, no_cooks, quarry, food);
+	//printf("%d mysliwych\n%d kucharzy\n%d miesa\n%d jedzenia\n", no_hunters, no_cooks, quarry, food);
 	
 	pthread_t hunters[no_hunters], cooks[no_cooks];
 	char hunters_names[no_hunters][20], cooks_names[no_cooks][20];
@@ -112,7 +110,7 @@ int main(int argc, char *argv[]) {
 		pthread_join(cooks[i], NULL);
 	}
 	
-	printf("\nNa koniec: %d miesa, %d jedzenia, %d ludzi\n\n", quarry, food, people_left);
+	printf("Na koniec: %d miesa, %d jedzenia, %d ludzi\n\n", quarry, food, people_left);
 	
 	return 0;
 }
