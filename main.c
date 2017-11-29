@@ -1,6 +1,6 @@
 // Alicja Kołodziejska
 
-#define _BSD_SOURCE // do usleep
+#define _BSD_SOURCE // do usleep()
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -13,19 +13,16 @@ pthread_mutex_t kitchen = PTHREAD_MUTEX_INITIALIZER, pantry = PTHREAD_MUTEX_INIT
 int food, quarry;
 const int night_length = 10;
 const int days = 365;
-char ck[] = "Kucharz", ht[] = "Mysliwy";
 
 int people_left;
 
-void eat(char *type, char *name) {
-	pthread_mutex_lock(&kitchen);		// obiad
+void eat() {
+	pthread_mutex_lock(&kitchen);			// obiad
 	if(food) {
 		food--;
-		//printf("%s %s je obiad, zostalo %d\n", type, name, food); 
 		pthread_mutex_unlock(&kitchen);
 	}
 	else {
-		//printf("%s %s obrazil sie i odszedl\n", type, name);
 		pthread_mutex_unlock(&kitchen);
 		people_left--;
 		pthread_exit(NULL);
@@ -35,23 +32,19 @@ void eat(char *type, char *name) {
 void *cook(void *name) {
 	int my_meat = 0;
 	for(int i=0; i<days; i++) {
-		//printf("Kucharz %s wstaje\n", (char*) name); 
 		pthread_mutex_lock(&pantry);		// pobranie mięsa
 		if(quarry) {
 			my_meat = 1;
 			quarry--;
-			//printf("Kucharz %s wzial mieso, zostalo %d\n", (char*) name, quarry);
 		}
 		pthread_mutex_unlock(&pantry);
-		if(my_meat) {				// przyrządzenie posiłku
+		if(my_meat) {						// przyrządzenie posiłku
 			pthread_mutex_lock(&kitchen);
 			food += rand()%6 + 1;
-			//printf("Kucharz %s przygotowal obiad, mamy %d\n", (char*) name, food);
 			pthread_mutex_unlock(&kitchen);
 			my_meat = 0;
 		}
-		eat(ck, (char*)name);
-		//printf("Kucharz %s idzie spac\n", (char*) name); 
+		eat();
 		usleep(night_length);
 	}
 	pthread_exit(NULL);
@@ -59,15 +52,12 @@ void *cook(void *name) {
 
 void *hunt(void *name) {
 	for(int i=0; i<days; i++) {
-		//printf("Mysliwy %s wstaje\n", (char*) name); 
-		if(rand()%6 > rand()%6) {	// polowanie
+		if(rand()%6 > rand()%6) {			// polowanie
 			pthread_mutex_lock(&pantry);
 			quarry++;
-			//printf("Mysliwy %s upolowal, mamy %d miesa\n", (char*) name, quarry);
 			pthread_mutex_unlock(&pantry);
 		}
-		eat(ht, (char*) name);
-		//printf("Mysliwy %s idzie spac\n", (char*) name); 
+		eat();
 		usleep(night_length);
 	}
 	pthread_exit(NULL);
@@ -79,8 +69,6 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 	
-	//ck = "Kucharz", ht = "Mysliwy";
-	
 	srand(time(0));
 	
 	int no_hunters = atoi(argv[1]), no_cooks = atoi(argv[2]);
@@ -89,18 +77,13 @@ int main(int argc, char *argv[]) {
 	quarry = atoi(argv[3]);
 	food = atoi(argv[4]);
 	
-	//printf("%d mysliwych\n%d kucharzy\n%d miesa\n%d jedzenia\n", no_hunters, no_cooks, quarry, food);
-	
 	pthread_t hunters[no_hunters], cooks[no_cooks];
-	char hunters_names[no_hunters][20], cooks_names[no_cooks][20];
 	
 	for(int i=0; i<no_hunters; i++){
-		sprintf(hunters_names[i], "%d", i+1);
-		pthread_create(hunters+i, NULL, hunt, (void*) (hunters_names + i));
+		pthread_create(hunters+i, NULL, hunt, NULL);
 	}
 	for(int i=0; i<no_cooks; i++){
-		sprintf(cooks_names[i], "%d", i+1);
-		pthread_create(cooks+i, NULL, cook, (void*) (cooks_names + i));
+		pthread_create(cooks+i, NULL, cook, NULL);
 	}
 	
 	for(int i=0; i<no_hunters; i++) {
