@@ -11,7 +11,7 @@
 // w spiżarni osadnicy trzymają mięso, w kuchni przyrządza i przechowuje się jedzenie
 pthread_mutex_t kitchen = PTHREAD_MUTEX_INITIALIZER, pantry = PTHREAD_MUTEX_INITIALIZER; 
 int food, quarry;
-const int night_length = 10;
+const int night_length = 1000;
 const int days = 365;
 
 int people_left;
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 		pthread_join(cooks[i], NULL);
 	}
 	
-	printf("Na koniec: %d miesa, %d jedzenia, %d ludzi\n\n", quarry, food, people_left);
+	//printf("Na koniec: %d miesa, %d jedzenia, %d ludzi\n\n", quarry, food, people_left);
 	
 	return 0;
 }
